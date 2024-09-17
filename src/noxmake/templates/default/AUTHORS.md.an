@@ -1,0 +1,4 @@
+## Author{% if pyproject.project.authors|length > 1 %}s{%endif%}
+{% for author in pyproject.project.authors -%}
+{{ author.name }} <{{ author.email }}>
+{% endfor %}

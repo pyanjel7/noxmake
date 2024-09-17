@@ -1,0 +1,16 @@
+Project status
+==============
+{% set devstatus = ( pyproject.project.classifiers | devstatus | title ) or "Proto" %}
+{{ "Proto - Tune - Fix - Prod - Lts - Deprecated" | replace(devstatus, "`" + devstatus + "`") }}
+
+Baseline
+========
+{%- for key in pyproject.project.keywords %}
+{%- if key.startswith('baseline:') %}
+{{ key[('baseline:'| length ):] }}
+{%- endif %}
+{%- endfor %}
+
+Dashboard
+=========
+

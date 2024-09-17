@@ -1,0 +1,27 @@
+# Readme
+
+## About {{ pyproject.project.name }}
+
+
+{{ pyproject.project.description }}
+
+## Requirements
+
+* Python {{ pyproject.project["requires-python"] }}
+
+## Installation
+
+To install {{ pyproject.project.name }}, simply execute:
+
+```shell
+$ pip install {{ pyproject.project.name }}
+```
+
+## Getting Started
+
+
+
+## License
+
+{{ license["name"] }}
+

@@ -1,0 +1,6 @@
+{%- set COPYRIGHT= " ".join(("(C)",time.now().year.__str__(), pyproject.project.authors[0].name, pyproject.project.authors[0].email)) %}
+{%- if license.details.standardLicenseHeaderTemplate %}
+{{license.details.standardLicenseHeaderTemplate|spdx_var("copyright", value=COPYRIGHT)|spdx_var("description", value=pyproject.project.description)|spdx_var(value="")|spdx_opt}}
+{%- else %}
+Copyright (C) {{time.now().year}} {{pyproject.project.authors[0].name}} {{pyproject.project.authors[0].email}}
+{%- endif %}

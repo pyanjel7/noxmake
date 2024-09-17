@@ -1,0 +1,28 @@
+{
+    "template": null,
+    "auto_deps": true,
+    "auto_deps_mode": ">=",
+    "auto_deps_local": false,
+    "license": "GPL-3.0+",
+    "devstatus": "proto",
+    "build_backend": "setuptools",
+    "srcdir": "src",
+    "testdir": "tests",
+    "docdir": "doc",
+    "changelog": "CHANGELOG.md",
+    "keywords": [
+        "baseline:Reals retires."
+    ],
+    "namespaces": true,
+    "defines": {},
+    "version_scm": true,
+    "version_dynamic": false,
+    "with_all": false,
+    "with_black": true,
+    "with_codespell": true,
+    "with_mypy": true,
+    "with_flake8": true,
+    "with_gitcliff": true,
+    "project_line_lenght": "200",
+    "project_description": "Noxmake is a nox wrapper for automatic project file generation."
+}

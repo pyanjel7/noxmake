@@ -1,0 +1,16 @@
+{
+    "AUTHORS.md" : "AUTHORS.md.an",
+    "COPYRIGHT" : "COPYRIGHT.an",
+    "LICENSE" : "LICENSE.an",
+    "noxfile.py" : "noxfile.py.an",
+    "pyproject.toml": "pyproject.toml.an",
+    "README.md": "README.md.an",
+    "BRANCH.md": "BRANCH.md.an",
+    "CHANGELOG.md" : "CHANGELOG.md.an",
+    ".git_archival.txt": ".git_archival.txt",
+    ".gitignore": ".gitignore",
+    ".gitattributes": ".gitattributes",
+    "src": "makedirs",
+    "doc": "makedirs",
+    "tests": "makedirs"
+}

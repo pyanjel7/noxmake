@@ -1,0 +1,273 @@
+{%- set PYVERSION = options.project_requires_python or ">= %s" % system.python_version %}
+{%- if git and git.user is defined %}
+{%- set USERNAME = git.user.name %}
+{%- set USEREMAIL = git.user.email %}
+{%- else %}
+{%- set USERNAME = system.user.name %}
+{%- set USEREMAIL = system.user.email %}
+{%- endif%}
+{%- set PROJECT_NAME = options.project_name or system.package_dirname -%}
+{%- set PROJECT_URL = options.project_url or "".join(("https://github.com/", USERNAME, "/", PROJECT_NAME)) -%}
+[project]
+name = "{{PROJECT_NAME}}"
+description = "{{options.project_description}}"
+readme = "{{options.project_readme or "README.md" }}"
+license = { expr = "{{options.license|licExpr}}", text = "{{(options.license | licExpr | license).details.name }}" }
+
+keywords = [
+{%- for key in options.keywords %}
+  "{{key}}",
+{%- endfor %}
+]
+
+requires-python = "{{ PYVERSION }}"
+
+{%- if options.version_scm or options.version_dynamic%}
+dynamic = ["version"]
+{%- else %}
+version = "{{ options.project_version or "0.1.0" }}"
+{%- endif %}
+
+authors = [
+  { name="{{USERNAME}}", email="{{USEREMAIL}}" },
+]
+
+classifiers = [
+
+  # Pick your license as you wish (see also "license" above)
+  {%- for lic in (options.license | licenses ) %}
+  {%- if lic.classifier != "" %}
+  "{{lic.classifier}}",
+  {%- endif %}
+  {%- endfor %}
+
+  # Specify the Python versions you support here.
+  {%- for version in (PYVERSION | pyver) %}
+  "Programming Language :: Python :: {{version}}",
+  {%- endfor %}
+
+  {%- if(options.devclassifier | devclassifier) != "" %}
+  # Specify the Development status
+  "{{options.devclassifier | devclassifier}}",
+  {%- endif %}
+]
+
+dependencies = [
+  {%- if options.auto_deps %}
+  {%- for pkg in  (options.srcdir | requirements(local_only=options.auto_deps_local)) %}
+  {%- if options.auto_deps_mode != "no" %}
+  "{{pkg | join(options.auto_deps_mode) }}",
+  {%- else %}
+  "{{ pkg[0] }}"
+  {% endif %}
+  {%- endfor %}
+  {%- endif %}
+  {%- if options.project_dependencies %}
+  {%- for dep in options.project_dependencies.replace(",", " ").replace(";", " ").split() %}
+  "{{ dep }}",
+  {%- endfor %}
+  {%- endif %}
+]
+
+[project.optional-dependencies]
+
+
+[project.urls]
+Documentation = "https://{{PROJECT_NAME}}.readthedocs.io"
+Repository = "https://github.com/{{USERNAME}}/{{PROJECT_NAME}}.git"
+Issues = "https://github.com/{{USERNAME}}/{{PROJECT_NAME}}/issues"
+Changelog = "https://github.com/{{USERNAME}}/{{PROJECT_NAME}}/blob/master/{{options.changelog}}"
+
+[project.scripts]
+noxmake = "noxmake.__main__:main"
+
+[build-system]
+{%- if options.build_backend == "setuptools" or "" %}
+requires = [
+    "setuptools",
+    "wheel",
+  {%- if options.version_scm %}
+    "setuptools_scm",
+  {%- endif %}
+]
+
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+  {%- if options.srcdir %}
+where = ["{{ options.srcdir }}"]
+  {%- endif %}
+
+namespaces = {{ options.namespaces | lower }}
+
+  {%- if options.version_scm %}
+[tool.setuptools_scm]
+  {%- endif %}
+
+{%- elif options.build_system == "hatchling" or "" %}
+requires = [ "hatchling" ]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+{%- if options.srcdir %}
+sources = ["{{ options.srcdir }}"]
+{%- endif %}
+
+{%- else  %}
+
+# requires = [
+# ]
+
+# build-backend = ""
+
+{%- endif %}
+
+[tool.noxmake]
+srcdir = "{{options.srcdir}}"
+testdir = "{{options.testdir}}"
+docdir = "{{options.docdir}}"
+devenv = "{{options.devenv}}"
+
+changelog = "{{options.changelog}}"
+
+{% for k,v in options.defines.items() %}
+{{k}} = {{v | tojson }}
+{%- endfor %}
+
+[tool.noxmake.options]
+envdir = "{{options.envdir}}"
+
+[tool.noxmake.sessions]
+venv_backend = "{{options.venv}}"
+reuse_venv = false
+venv_params =  []
+
+{% if options.with_black %}
+[tool.black]
+line-length = {{ options.project_line_lenght or "88" }}
+{% endif %}
+
+{% if options.with_codespell %}
+[tool.codespell]
+{% endif %}
+
+{% if options.with_mypy %}
+[tool.mypy]
+disable_error_code = ["import-untyped", "abstract"]
+allow_redefinition = true
+namespace_packages = true
+files = [ "{{options.srcdir}}" ]
+{%- endif %}
+
+{% if options.with_flake8 %}
+[tool.flake8]
+max-line-length = {{ options.project_line_lenght or "88" }}
+{% endif %}
+
+{% if options.with_unittest %}
+[tool.unittest]
+{% endif %}
+
+{% if options.with_pytest %}
+[tool.pytest]
+{% endif %}
+
+{% if options.with_gitcliff %}
+
+[tool.git-cliff]
+output = "{{options.changelog}}"
+
+[tool.git-cliff.git]
+# parse the commits based on https://www.conventionalcommits.org
+conventional_commits = true
+# filter out the commits that are not conventional
+filter_unconventional = false
+# regex for parsing and grouping commits
+commit_parsers = [
+    { message = "^ign", group = "Waste", skip = true },
+    { message = "^[a|A]dd", group = "Added" },
+    { message = "^[s|S]upport", group = "Added" },  # codespell:ignore
+    { message = "^[r|R]emove", group = "Removed" },
+    { message = "^.*: add", group = "Added" },
+    { message = "^.*: support", group = "Added" },
+    { message = "^.*: remove", group = "Removed" },
+    { message = "^.*: delete", group = "Removed" },
+    { message = "^test", group = "Fixed" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^.*: fix", group = "Fixed" },
+    { message = "^.*", group = "Waste", skip = true },
+]
+# filter out the commits that are not matched by commit parsers
+filter_commits = false
+# sort the tags topologically
+topo_order = false
+# sort the commits inside sections by oldest/newest order
+sort_commits = "newest"
+
+[tool.git-cliff.changelog]
+header = """
+# Changelog\n
+All notable changes to this project will be documented in this file.
+"""
+
+# https://keats.github.io/tera/docs/#introduction
+{% raw %}
+body = """
+{% if version -%}
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+    ## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | upper_first }}
+    {% for commit in commits %}
+      {{"- "}}
+      {%- if commit.scope -%}
+        [{{ commit.scope }}]{{" "}}
+      {%- endif -%}
+      {{ commit.message | split(pat="\n") | first | upper_first | trim }}\
+    {% endfor %}
+{% endfor %}\n
+"""
+{% endraw %}
+# template for the changelog footer
+{% raw %}
+footer = """
+<!-- generated by git-cliff -->
+"""
+{% endraw %}
+# remove the leading and trailing whitespace from the templates
+trim = true
+
+{% endif %}
+
+{% if options.with_coverage %}
+
+[tool.coverage.run]
+branch =  
+{%- if options.using_coverage_branch is defined -%}
+{{options.using_coverage_branch}}
+{%- else -%}
+true
+{%- endif %}
+parallel =  
+{%- if options.using_coverage_parallel is defined -%}
+{{options.using_coverage_parallel}}
+{%- else -%}
+true
+{%- endif %}
+source = ["{{options.srcdir}}"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  '\#\s*pragma: no cover',
+  '^\s*raise AssertionError\b',
+  '^\s*raise NotImplementedError\b',
+  '^\s*return NotImplemented\b',
+  '^\s*raise$',
+  '^assert False\b',
+  '''^if __name__ == ['"]__main__['"]:$''',
+]
+{% endif %}

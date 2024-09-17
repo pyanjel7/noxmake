@@ -1,0 +1,2 @@
+[codespell]
+skip = src/noxmake/text.py, src/noxmake.egg-info/*

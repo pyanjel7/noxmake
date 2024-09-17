@@ -1,0 +1,262 @@
+import nox
+import subprocess
+import glob
+import pathlib
+
+
+SESSIONS_KWARGS = {
+    # j2:  for key, value in (pyproject.tool.noxmake.sessions | items)
+    # j2_: "{{key}}": {{value | pprint}},
+    # j2:  endfor
+    # j2:  if python not in pyproject.tool.noxmake.sessions
+    # j2_: "python": {{pyproject.project["requires-python"] | pyver | pprint}},
+    # j2:  endif
+}
+
+
+# j2:  for key, value in (pyproject.tool.noxmake.options | items)
+# j2_: nox.options.{{key}} = {{value | pprint}}
+# j2:  endfor
+
+
+nox.options.sessions = ["prep", "lint", "tests", "coverage"]
+
+
+#
+# helpers
+#
+def git_add(path=["."]):
+    subprocess.run(["git", "add", *path])
+
+
+def git_commit(msg, path=["."]):
+    subprocess.run(["git", "commit", "-m", msg, *path])
+
+
+def tag(tag, msg, force=False):
+    args = ["git", "tag", tag, "-m", msg]
+
+    if force:
+        args.append("-af")
+
+    subprocess.run(args)
+
+
+def get_current_tag():
+    try:
+        return subprocess.check_output(["git", "describe", "--no-abbrev", "--tags"], text=True).strip() or "v0.0.0"
+    except subprocess.CalledProcessError:
+        pass
+
+    return ""
+
+
+def is_git_clean():
+    return subprocess.check_output(["git", "describe", "--all", "--dirty"], text=True).find("dirty") == -1
+
+
+def get_distrib_files():
+    files = glob.glob("dist/*")
+    version = get_current_tag().lstrip("v")
+    whl_name = f"{{pyproject.project.name}}-{version}-py"
+    src_name = f"{{pyproject.project.name}}-{version}.tar.gz"
+    return [file for file in files if file.endswith(src_name) or file.find(whl_name) != -1]
+
+
+def get_new_version_from_git_cliff(session, bump):
+    try:
+        version = subprocess.check_output([pathlib.Path(session.bin) / "git-cliff", "--bumped-version", "--bump", bump], text=True).strip()
+        return f"{version.splitlines()[-1]}"
+    except subprocess.CalledProcessError:
+        pass
+
+    return ""
+
+
+def format(session):
+    # j2: if pyproject.tool.black is defined
+    session.install("black")
+    session.run("black", "{{pyproject.tool.noxmake.srcdir}}")
+    # j2: else
+    session.skip("formatter tool not defined")
+    # j2: endif
+
+
+#
+# sessions
+#
+
+
+@nox.session(**SESSIONS_KWARGS)
+def dev(session: nox.Session) -> None:
+    session.install("--upgrade", "pip")
+    session.install("-e", ".[dev]")
+
+
+@nox.session
+def prep(session: nox.Session) -> None:
+    force = "-f" in session.posargs
+
+    if not is_git_clean() and not force:
+        session.error('Version is not clean, , use "nox -s finalize -- -f" to disable version check')
+
+    bump = "auto"
+    new_version = ""
+
+    for arg in session.posargs:
+        if arg in ("major", "minor", "patch"):
+            bump = arg
+        if arg.startswith("v"):
+            new_version = arg
+
+    # j2: if pyproject.tool["git-cliff"] is defined
+    session.install("git-cliff")
+    new_version = new_version or get_new_version_from_git_cliff(session, bump)
+    session.run(
+        "git-cliff",
+        "--tag",
+        new_version,
+        "-o",
+        # j2_: "{{pyproject.tool["git-cliff"].output}}",
+    )
+    pathlib.Path(".changelog_version").write_text(new_version)
+    git_add([".changelog_version"])
+    # j2: endif
+    session.run("noxmake", "--", "-f", "--only-local", silent=True, external=True)
+    format(session)
+
+
+@nox.session
+def finalize(session: nox.Session) -> None:
+    force = "-f" in session.posargs
+
+    try:
+        version = pathlib.Path(".changelog_version").read_text()
+    except FileNotFoundError:
+        session.error("Changelog version not found, run prep session before")
+
+    # j2: if pyproject.tool["git-cliff"] is defined
+    git_commit(
+        "ign: changelog updated",
+        path=[
+            ".changelog_version",
+            # j2_: "{{pyproject.tool["git-cliff"].output}}"
+        ],
+    )
+
+    # j2: endif
+
+    if version == get_current_tag() and not force:
+        session.error('No change detected, use "nox -s finalize -- -f" to move the current version to the head')
+
+    if not is_git_clean() and not force:
+        session.error('Version is not clean, use "nox -s finalize -- -f" to disable version check')
+
+    if force:
+        tag(version, "-af", "ign: baseline={{pyproject.tool.noxmake.baseline}}")
+    else:
+        tag(version, "ign: baseline={{pyproject.tool.noxmake.baseline}}")
+
+
+@nox.session(**SESSIONS_KWARGS)
+def release(session) -> None:
+    session.install("build")
+
+    session.run("python", "-m", "build")
+    files = get_distrib_files()
+    session.log(files)
+    if not files:
+        session.error("no release package have been created, check git status")
+
+
+@nox.session(**SESSIONS_KWARGS)
+def lint(session: nox.Session) -> None:
+    session.install("-e", ".[dev]")
+
+    # j2: if pyproject.tool.codespell is defined
+    session.install("codespell")
+    session.run("codespell", "{{pyproject.tool.noxmake.srcdir}}")
+    # j2: endif
+
+    # j2:  if pyproject.tool.flake8 is defined
+    session.install("flake8")
+    session.run(
+        "flake8",
+        # j2:  for opt, value in pyproject.tool.flake8.items()
+        # j2_: "--{{opt | replace("_", "-")}}",  "{{value }}",
+        # j2:  endfor
+        # j2_: "{{pyproject.tool.noxmake.srcdir}}"
+    )
+    # j2: endif
+
+    # j2: if pyproject.tool.mypy is defined
+    session.install("mypy")
+    session.run("mypy")
+    # j2: endif
+
+
+@nox.session(**SESSIONS_KWARGS)
+def tests(session: nox.Session):
+    # j2: if pyproject.tool.pytest is defined or pyproject.tool.unittest is defined
+    session.install("build")
+    outdir = session.create_tmp()
+    session.run("python", "-m", "build", "--outdir", outdir)
+    files = glob.glob(f"{outdir}/*.whl")
+    session.install(*files)
+
+    with session.chdir("{{pyproject.tool.noxmake.testdir}}"):
+        # j2: if pyproject.tool.pytest is defined
+        session.install("pytest")
+        session.run("pytest")
+        # j2: endif
+
+        # j2: if pyproject.tool.unittest is defined
+        session.run("python", "-m", "unittest", "-k", "test_")
+        # j2: endif
+
+    # j2: else
+    session.skip("test is not defined")
+    # j2: endif
+
+
+@nox.session(**SESSIONS_KWARGS)
+def coverage(session: nox.Session):
+    # j2: if pyproject.tool.coverage is defined
+    session.install("--upgrade", "pip")
+    session.install("-e", ".[dev]")
+
+    session.install("coverage")
+    with session.chdir("{{pyproject.tool.noxmake.testdir}}"):
+        # j2: if pyproject.tool.unittest is defined
+        session.run("coverage", "run", "-m", "unittest", "-k", "test_")
+        # j2: endif
+
+        # j2: if pyproject.tool.pytest is defined
+        session.install("pytest")
+        session.run("coverage", "run", "-m", "pytest")
+        # j2: endif
+
+    session.run("coverage", "report")
+    # j2: else
+    session.skip("coverage is not defined")
+    # j2: endif
+
+
+@nox.session
+def build(session: nox.Session):
+    session.install("build")
+    session.run("python", "-m", "build")
+
+
+@nox.session
+def publish(session: nox.Session):
+    session.install("twine")
+    files = get_distrib_files()
+    session.log("%s" % files)
+    session.run("twine", "upload", *files)
+
+
+if __name__ == "__main__":
+    import nox.__main__
+
+    nox.__main__.main()
