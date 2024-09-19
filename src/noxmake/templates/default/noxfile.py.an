@@ -98,7 +98,7 @@ def prep(session: nox.Session) -> None:
     force = "-f" in session.posargs
 
     if not is_git_clean() and not force:
-        session.error('Version is not clean, , use "nox -s finalize -- -f" to disable version check')
+        session.error('Version is not clean, , use "nox -s prep -- -f" to disable version check')
 
     bump = "auto"
     new_version = ""
