@@ -179,7 +179,7 @@ max-line-length = {{ options.project_line_lenght or "88" }}
 {% if options.with_gitcliff %}
 
 [tool.git-cliff]
-output = "{{options.project_changelog_output}}"
+output = "{{options.changelog}}"
 
 [tool.git-cliff.git]
 # parse the commits based on https://www.conventionalcommits.org
