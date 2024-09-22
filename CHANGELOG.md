@@ -1,6 +1,18 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.1.1] - 2024-09-22
+
+### Added
+
+- Relative path management in uri
+- Support for getting predefined config in the template location
+
+### Fixed
+
+- Prep error message in noxfile template
+- Wrong option attribute for git-clif output
+
 ## [0.1.0] - 2024-09-17
 
 ### Added
