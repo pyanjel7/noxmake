@@ -51,10 +51,7 @@ def _classifier_pyver(text):
 
 def _new_jinja_env(loader=None, template_name=""):
 
-    if template_name.endswith(".py"):
-        env = jinja2.Environment(loader=loader or loaders)
-    else:
-        env = jinja2.Environment(loader=loader or loaders)
+    env = jinja2.Environment(loader=loader or loaders)
 
     env.globals["time"] = datetime.datetime
     env.filters["spdx_var"] = _spdx_template_var
@@ -165,5 +162,5 @@ def render(template_name: str, obj, loader=loaders):
     return template.render(obj), template.filename
 
 
-def source(template_name: str, obj, loader=loaders):
+def source(template_name: str, loader=loaders):
     return loader.get_source(_new_jinja_env(loader), template_name)
