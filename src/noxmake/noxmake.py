@@ -70,17 +70,16 @@ def _undef(key=None):
 
 
 def _config_read():
+
+    config = "{}"
+
     try:
-
-        with open(".noxmake_cfg") as f:
-            config_dict = json.load(f)
-
-        return argparse.Namespace(**config_dict)
-
+        config = pathlib.Path(".noxmake_cfg").read_text()
     except FileNotFoundError:
-        pass
+        if "[cfg]" in templates:
+            config, _, _ = source("[cfg]")
 
-    return argparse.Namespace()
+    return argparse.Namespace(**json.loads(config))
 
 
 def _config_write(namespace: argparse.Namespace):
@@ -322,8 +321,11 @@ def create_session(posargs):
     namespace = _build_config(posargs)
 
     uri_loader.reset(namespace.template)
+
     loader = project_loader if namespace.only_local else loaders
     templates = loader.list_templates()
+
+    namespace = _build_config(posargs)
 
     for tmpl in loader.list_templates():
 
@@ -351,5 +353,5 @@ def prepare(session: nox.Session):
         session.error("pyproject.toml not found")
 
     for tmpl in templates:
-        if tmpl != "pyproject.toml":
+        if tmpl != "pyproject.toml" and not tmpl.startswith("[cfg]"):
             session.notify(tmpl)
