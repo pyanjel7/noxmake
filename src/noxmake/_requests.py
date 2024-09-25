@@ -45,7 +45,7 @@ def as_uri(url):
 
     if url_splitted.scheme == "file" and url_splitted.path.startswith(("/../", "/./")):
         return pathlib.Path(url_splitted.path[1:]).resolve().as_uri()
-    
+
     return url
 
 
