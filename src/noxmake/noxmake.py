@@ -14,7 +14,7 @@ from .render import render, source, uri_loader, loaders, project_loader, wonders
 
 
 templates = []
-
+namespace = argparse.Namespace()
 
 class _add(argparse.Action):
 
@@ -145,8 +145,6 @@ def _prepare_file(
     loader=None,
     template=None,
 ):
-    namespace = _build_config(session.posargs)
-
     cfg = NoxmakeConfigBuilder().build(namespace)
 
     file = pathlib.Path(filename)
@@ -172,8 +170,6 @@ def _prepare_file(
 
 
 def _prepare_an(session: nox.Session, tmplname: str, loader: jinja2.loaders.BaseLoader):
-    namespace = _build_config(session.posargs)
-
     file = pathlib.Path(tmplname + NOXMAKE_EXT)
 
     if not namespace.force and file.exists():
@@ -317,6 +313,7 @@ def create_parser():
 
 def create_session(posargs):
     global templates
+    global namespace
 
     namespace = _build_config(posargs)
 
@@ -344,7 +341,7 @@ def create_session(posargs):
 def prepare(session: nox.Session):
     try:
         if "pyproject.toml" in templates:
-            namespace = _prepare_file(session, "pyproject.toml")
+            _prepare_file(session, "pyproject.toml")
             _config_write(namespace)
     except nox.sessions._SessionSkip:
         pass
