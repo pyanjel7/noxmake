@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-## [0.1.1] - 2024-09-22
+## [0.1.1] - 2024-09-25
 
 ### Added
 
@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Uri management
+- Streamline of arg namespace
 - Prep error message in noxfile template
 - Wrong option attribute for git-clif output
 
