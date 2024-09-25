@@ -16,6 +16,7 @@ from .render import render, source, uri_loader, loaders, project_loader, wonders
 templates = []
 namespace = argparse.Namespace()
 
+
 class _add(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
