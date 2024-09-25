@@ -124,7 +124,8 @@ class NoxmakeJsonLoader(jinja2.BaseLoader):
         if self.mapping is None:
             self.reset()
 
-        template = self.mapping.get(template)
+        if self.mapping:
+            template = self.mapping.get(template)
 
         if template:
             url = url_join(self.baseurl, template)
