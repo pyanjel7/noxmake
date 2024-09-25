@@ -1,3 +1,4 @@
+import json
 import jinja2
 import datetime
 import re
@@ -7,6 +8,7 @@ import jinja2.ext
 import os
 
 import namemaker
+from noxmake.warn import warning
 import wonderwords
 
 from .requirements import requirements
@@ -17,7 +19,7 @@ from .classifiers import (
     devstatus_to_classifier,
     classifiers_to_devstatus,
 )
-from ._requests import get_templates, get_text
+from ._requests import session, as_uri, url_join
 from .text import book
 
 
@@ -98,19 +100,39 @@ class NoxmakeExtension(jinja2.ext.Extension):
 class NoxmakeJsonLoader(jinja2.BaseLoader):
     def __init__(self):
         self.baseurl = "pymod:///noxmake.templates.default"
-        self.mapping = dict()
-        self.reset()
+        self.mapping = None
 
     def reset(self, baseurl: str | None = None):
         if baseurl:
-            self.baseurl = baseurl
+            self.baseurl = as_uri(baseurl)
 
-        self.mapping = get_templates(self.baseurl)
+        url = url_join(self.baseurl, "templates.json")
+
+        resp = session.get(url=url)
+
+        if resp.ok:
+            try:
+                self.mapping = resp.json()
+                return
+            except json.JSONDecodeError:
+                pass
+
+        self.mapping = dict()
+        warning(f"unable to fetch templates from {url}")
 
     def get_source(self, environment: jinja2.Environment, template: str):
+        if self.mapping is None:
+            self.reset()
+
         template = self.mapping.get(template)
+
         if template:
-            source, url = get_text(self.baseurl, template)
+            url = url_join(self.baseurl, template)
+
+            resp = session.get(url=url)
+            if resp.ok:
+                source = resp.content.decode(resp.encoding or "utf8")
+
             if source:
                 return source, url, lambda: True
 
