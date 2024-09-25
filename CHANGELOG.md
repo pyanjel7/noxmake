@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.1.2] - 2024-09-25
+
+### Fixed
+
+- Relative file path management for uri
+- Coverage report not workingl
+
 ## [0.1.1] - 2024-09-25
 
 ### Added
