@@ -153,7 +153,7 @@ def finalize(session: nox.Session) -> None:
         session.error('Version is not clean, use "nox -s finalize -- -f" to disable version check')
 
     if force:
-        tag(version, "-af", "ign: baseline={{pyproject.tool.noxmake.baseline}}")
+        tag(version, "ign: baseline={{pyproject.tool.noxmake.baseline}}", force=True)
     else:
         tag(version, "ign: baseline={{pyproject.tool.noxmake.baseline}}")
 
