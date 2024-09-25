@@ -236,7 +236,7 @@ def coverage(session: nox.Session):
         session.run("coverage", "run", "-m", "pytest")
         # j2: endif
 
-    session.run("coverage", "report")
+        session.run("coverage", "report")
     # j2: else
     session.skip("coverage is not defined")
     # j2: endif
